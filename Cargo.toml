@@ -1,0 +1,7 @@
+[workspace]
+members = [
+  "api",
+  "url-shortener",
+# "cli",
+]
+resolver = "2"
