@@ -5,7 +5,8 @@ use crate::models::{ShortCode, Url, UrlMapping, UrlMappingWithStats};
 use crate::{Error, Result};
 
 use crate::cornucopia::queries::url_queries::{
-    delete_url, get_mapping, get_url_with_stats, insert_url, update_url, InsertUrlParams, UpdateUrlParams,
+    delete_url, get_url, get_url_with_stats, increase_access_count, insert_url, update_url,
+    InsertUrlParams, UpdateUrlParams,
 };
 
 pub struct UrlShortenerApi {}
@@ -20,7 +21,7 @@ impl UrlShortenerApi {
         client: &tokio_postgres::Client,
         code: &ShortCode,
     ) -> Result<UrlMapping> {
-        let url_mapping = get_mapping()
+        let url_mapping = get_url()
             .bind(client, &code.as_str())
             .map(|row| UrlMapping {
                 id: row.id,
@@ -56,7 +57,7 @@ impl UrlShortenerApi {
             .one()
             .await
             .map_err(|_| Error::CodeNotFound {
-                code: code.as_str().to_string()
+                code: code.as_str().to_string(),
             })
     }
 
@@ -133,5 +134,19 @@ impl UrlShortenerApi {
                 Error::DbError
             })
     }
-    // pub fn get_stats(&self, code);
+
+    pub async fn increase_access_count(
+        &self,
+        client: &tokio_postgres::Client,
+        id: &Uuid,
+    ) -> Result<()> {
+        increase_access_count()
+            .bind(client, id)
+            .await
+            .map(|_| ())
+            .map_err(|e| {
+                println!("Error: {}", e);
+                Error::DbError
+            })
+    }
 }

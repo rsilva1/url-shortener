@@ -1,7 +1,7 @@
 --: Url(id, short_code, url, created_at, updated_at)
 --: UrlWithStats(id, short_code, url, created_at, updated_at, access_count)
 
---! get_mapping (short_code) : Url
+--! get_url (short_code) : Url
 SELECT id, short_code, url, created_at, updated_at
 FROM urls
 WHERE urls.short_code = :short_code;
@@ -25,3 +25,8 @@ RETURNING *;
 --! delete_url (short_code)
 DELETE FROM urls
 WHERE short_code = :short_code;
+
+--! increase_access_count
+UPDATE visits
+SET amount = amount + 1
+WHERE url_id = :id;

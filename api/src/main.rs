@@ -1,10 +1,7 @@
 pub use error::{Error, Result};
 
 use axum::{
-    extract::{Path, State},
-    http::StatusCode,
-    routing::{get, post, put},
-    Json, Router,
+    extract::{Path, Request, State}, http::{StatusCode, Uri}, response::Redirect, routing::{get, post, put}, Json, Router
 };
 use bb8::Pool;
 use bb8_postgres::PostgresConnectionManager;
@@ -32,7 +29,7 @@ async fn main() -> Result<()> {
             put(put_mapping).get(get_mapping).delete(delete_mapping),
         )
         .route("/shorten/{code}/stats", get(get_mapping_stats))
-        // anything else as a fallback
+        .route("/{code}", get(try_redirect))
         .with_state(pool);
     let listener = tokio::net::TcpListener::bind("127.0.0.1:3000")
         .await
@@ -85,11 +82,11 @@ async fn put_mapping(
 
 async fn delete_mapping(
     State(pool): State<ConnectionPool>,
-    Path(short_code): Path<ShortCode>,
+    Path(code): Path<ShortCode>,
 ) -> Result<StatusCode> {
     let client = pool.get().await.map_err(|_| Error::InternalServerError)?;
     url_shortener::UrlShortenerApi::new()
-        .delete_mapping(&client, &short_code)
+        .delete_mapping(&client, &code)
         .await
         .unwrap();
     Ok(StatusCode::OK)
@@ -105,4 +102,16 @@ async fn create_mapping(
         .await
         .unwrap();
     Ok(Json(mapping.short_code))
+}
+
+async fn try_redirect(
+    State(pool): State<ConnectionPool>,
+    Path(code): Path<ShortCode>,
+) -> Result<Redirect> {
+    let client = pool.get().await.map_err(|_| Error::InternalServerError)?;
+    let url_mapping = url_shortener::UrlShortenerApi::new()
+        .get_mapping(&client, &code)
+        .await
+        .unwrap();
+    Ok(Redirect::temporary(url_mapping.url.as_str()))
 }
