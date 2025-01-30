@@ -39,7 +39,7 @@ impl From<ShortCode> for String {
     }
 }
 
-fn total_codes(code_len: u32) -> u32 {
+fn _total_codes(code_len: u32) -> u32 {
     u32::pow(36, code_len)
 }
 
@@ -48,15 +48,15 @@ pub struct Url(String);
 
 impl Url {
     pub fn new(url: String) -> Result<Self> {
-        if Url::valid_url(&url) == false {
+        if !Url::valid_url(&url) {
             return Err(Error::InvalidUrl { url });
         }
         Ok(Self(url))
     }
 
     // somewhat simple url validation, but good enough for this specific project
-    fn valid_url(url: &String) -> bool {
-        match ExtUrl::parse(&url) {
+    fn valid_url(url: &str) -> bool {
+        match ExtUrl::parse(url) {
             Ok(ext_url) => {
                 let scheme = ext_url.scheme();
                 scheme == "http" || scheme == "https"
@@ -68,9 +68,11 @@ impl Url {
     pub fn as_str(&self) -> &str {
         &self.0
     }
+}
 
-    pub fn to_string(self) -> String {
-        self.0
+impl std::fmt::Display for Url {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.0)
     }
 }
 
@@ -118,7 +120,7 @@ impl UrlMapping {
 }
 
 pub struct UrlAccessCount {
-    id: Uuid,
+    _id: Uuid,
     access_count: u64,
 }
 
@@ -156,7 +158,7 @@ mod tests {
 
     #[test]
     fn generate_random_short_codes() {
-        println!("Total codes len {}: {}", CODE_LEN, total_codes(CODE_LEN));
+        println!("Total codes len {}: {}", CODE_LEN, _total_codes(CODE_LEN));
         let mut short_codes: Vec<ShortCode> =
             (0..).take(100).map(|_| ShortCode::generate()).collect();
         short_codes.sort();

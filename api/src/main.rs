@@ -1,7 +1,7 @@
 pub use error::{Error, Result};
 
 use axum::{
-    extract::{Path, Request, State}, http::{StatusCode, Uri}, response::Redirect, routing::{get, post, put}, Json, Router
+    extract::{Path, State}, http::StatusCode, response::Redirect, routing::{get, post, put}, Json, Router
 };
 use bb8::Pool;
 use bb8_postgres::PostgresConnectionManager;
@@ -109,8 +109,13 @@ async fn try_redirect(
     Path(code): Path<ShortCode>,
 ) -> Result<Redirect> {
     let client = pool.get().await.map_err(|_| Error::InternalServerError)?;
-    let url_mapping = url_shortener::UrlShortenerApi::new()
+    let service = url_shortener::UrlShortenerApi::new();
+    let url_mapping = service
         .get_mapping(&client, &code)
+        .await
+        .unwrap();
+    service
+        .increase_access_count(&client, &url_mapping.id)
         .await
         .unwrap();
     Ok(Redirect::temporary(url_mapping.url.as_str()))

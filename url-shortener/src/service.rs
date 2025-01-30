@@ -9,28 +9,22 @@ use crate::cornucopia::queries::url_queries::{
     InsertUrlParams, UpdateUrlParams,
 };
 
-#[derive(Default)]
-pub struct UrlShortenerApi {}
+pub struct UrlService {
+    client: tokio_postgres::Client,
+}
 
-impl UrlShortenerApi {
-    pub fn new() -> Self {
-        Self {}
+impl UrlService {
+    pub fn new(client: tokio_postgres::Client) -> Self {
+        Self { client }
     }
 
     pub async fn get_mapping(
         &self,
-        client: &tokio_postgres::Client,
         code: &ShortCode,
     ) -> Result<UrlMapping> {
         let url_mapping = get_url()
-            .bind(client, &code.as_str())
-            .map(|row| UrlMapping {
-                id: row.id,
-                short_code: row.short_code.into(),
-                url: row.url.into(),
-                created_at: row.created_at,
-                updated_at: row.updated_at,
-            })
+            .bind(&self.client, &code.as_str())
+            .map(|row| row.into())
             .one()
             .await
             // todo consider other errors like connection issues
@@ -47,14 +41,7 @@ impl UrlShortenerApi {
     ) -> Result<UrlMappingWithStats> {
         get_url_with_stats()
             .bind(client, &code.as_str())
-            .map(|row| UrlMappingWithStats {
-                id: row.id,
-                short_code: row.short_code.into(),
-                url: row.url.into(),
-                created_at: row.created_at,
-                updated_at: row.updated_at,
-                access_count: row.access_count as u64,
-            })
+            .map(|row| row.into())
             .one()
             .await
             .map_err(|_| Error::CodeNotFound {
@@ -106,13 +93,7 @@ impl UrlShortenerApi {
                     code: code.as_str(),
                 },
             )
-            .map(|row| UrlMapping {
-                id: row.id,
-                short_code: row.short_code.into(),
-                url: row.url.into(),
-                created_at: row.created_at,
-                updated_at: row.updated_at,
-            })
+            .map(|row| row.into())
             .one()
             .await
             .map_err(|e| {
